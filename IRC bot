@@ -1,0 +1,279 @@
+#################################################################################################################
+#	Steven J. Core ( Sjc1000 )
+#									
+#	A simple IRC bot											
+#################################################################################################################
+#	This is just a simple IRC bot that was built for cool IRC things.					
+#	It is really my first Python project. So it may not be the best or the nicest.				
+#################################################################################################################
+
+
+############################################# IMPORT ###########################################################
+# 	Import all the needed extra's. Python doesn't include them by default. But still has them by default.
+import socket
+import re
+import json
+import urllib2
+import urllib
+import random
+#################################################################################################################
+
+
+############################################## USER VARIABLES ###################################################
+#	Feel free to change all of these, they were put in variables like this so you can easily change them
+# 	without having to change raw code.
+network     	= 'irc.freenode.net'          	# The network to join to          	
+port        	= 6667                         	# The port to join on ( 6667 is default )
+
+channel     	= "Sjc_Bot"                   	# The channel to start on
+name        	= "sjBot"                    	# The name to start with
+bot_cmd     	= ">>"                        	# The command, so the bot knows its being told to do something.
+master      	= "@unaffiliated/sjc1000"    	# The master of the bot ( the one who can use the master commands )
+
+commandLength	= len( bot_cmd)					# Gets the length of the bot command
+##################################################################################################################
+
+
+############################################ PROGRAM VARIABLES ###################################################
+weapons 		= [
+	"a small lion.",
+	"an angry mountain.",
+	"the power of 3.",
+	"a honey badger.",
+	"a Hyper beam.",
+	"a short drop and a sudden stop.",
+	"a spoon, because knives are too easy.",
+	"a bowtie."
+
+]
+##################################################################################################################
+
+
+############################################ FUNCTIONS #########################################################
+#	Initiates all the functions, for later use.
+
+def google_search( query ):
+	search 			= query.replace(" ", "+")
+
+
+	url				= 'http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=' + search 
+	hdr 			= {'User-Agent': 'Mozilla/5.0'} 
+	request 		= urllib2.Request( url, headers=hdr)
+	response 		= urllib2.urlopen( request)
+	
+	html			= response.read()
+
+	output 			= json.loads( html)
+
+	title 			= output['responseData']['results'][0]['titleNoFormatting']
+	url 			= output['responseData']['results'][0]['url']
+	
+	url 			= urllib.unquote( url)
+	title 			= urllib.unquote( title)
+
+	return title + " - " + url
+#################################################################################################################
+	
+def is_command( cmd ):
+	try:
+		check 			= commands[ cmd]
+	except:
+		return False
+	else:
+		return True
+
+#################################################################################################################
+def func_hello():
+    irc.send( b"PRIVMSG " + channel + b" :Hi, " + user + b".\r\n")
+
+#################################################################################################################
+def func_g():
+	data 			= google_search( full )
+	irc.send( b"PRIVMSG " + channel + b" :" + data + "\r\n")
+
+#################################################################################################################
+def func_ahk():
+	query 			= "" +  urllib.quote( full )  + "&cx=009062493091172133168:_o2f4moc9ce"
+	data 			= google_search( query )
+	irc.send( "PRIVMSG " + channel + " :" + data + "\r\n" )
+
+#################################################################################################################
+
+def func_imdb():
+	search 			= full.replace(" ", "+")
+
+	url 			= "http://www.omdbapi.com/?t=" + search
+	hdr 			= {'User-Agent': 'Mozilla/5.0'} 
+	request 		= urllib2.Request( url, headers=hdr)
+	response 		= urllib2.urlopen( request)
+
+	html			= response.read()
+	output 			= json.loads( html)
+
+	try:
+		title 			= output['Title']
+		year 			= output['Year']
+		plot 			= output['Plot']
+		url 			= "http://www.imdb.com/showtimes/title/" + output['imdbID']
+
+		data 			= title + "(" + year + ") " + plot + " - " + url
+		irc.send( "PRIVMSG " + channel + " :" + data + "\r\n")
+	
+	except:
+		irc.send( "PRIVMSG " + channel + " :No data found\r\n")
+
+
+
+
+
+#################################################################################################################
+def func_kill():
+	try:
+		person 			= params[1]
+	except:
+		person 			= user
+
+
+	try:
+		weapon 		= "a " + params[2]
+	except:
+		weapon 		= random.choice( weapons)
+	
+	if weapon == "a ":
+		weapon 		= random.choice( weapons)
+
+	irc.send("PRIVMSG " + channel + ":\x01action Kills " + person + " with " + weapon + "\x01\r\n")
+#################################################################################################################
+
+def func_commands():
+	for x in command_list:
+		irc.send("PRIVMSG " + user + " :" + x + " - " + command_list[x] + "\r\n")
+
+
+#################################################################################################################
+def master_join():
+    if host.find( master) == -1:
+        return 1
+
+    irc.send( b"JOIN " + params[1] + b"\r\n" )
+ 
+#################################################################################################################
+def master_leave():
+    if host.find( master) == -1:
+        return 1
+
+    irc.send( b"PART " + params[1] + b"\r\n")
+
+#################################################################################################################
+def master_nick():
+	if host.find( master) == -1:
+		return 1
+	
+	irc.send( b"NICK " + params[1] + b"\r\n" )
+#################################################################################################################
+
+
+################################################# COMMANDS ######################################################
+# 	This is just an array for the commands
+# 	The bot will refer to these to check if the command it was given is a function. Then it will call the function.
+# 	This also has an array for the description about the command.
+commands        = { b"hey"		: func_hello,
+                    b"hi"		: func_hello,
+					b"g"		: func_g,
+					b"ahk"		: func_ahk,
+					b"imdb"		: func_imdb,
+					b"kill"		: func_kill,
+					b"commands"	: func_commands,
+                    b"join"		: master_join,
+                    b"leave"	: master_leave,
+					b"nick"		: master_nick
+                   }
+				   
+				   
+command_list 	= { b"hey" 		: b"This will make the bot say hello back to the user.",
+					b"hi" 		: b"The same as Hey",
+					b"g"		: b"Searches google for a query",
+					b"ahk"		: b"Searches google for an AHK related query",
+					b"imdb"		: b"Searched imdb for a movie and shows data.",
+					b"kill"		: "Kills someone with a random or specified weapon.",
+					"commands"	: "Gives a list of commands.",
+					b"join" 	: b" Only usable by the bots master. It will join a channel",
+					b"leave" 	: b" Only usable by the bots master. It will leave a channel",
+					b"nick" 	: b" Only usable by the bots master. It will change the bot's nickname ( only for the current iteration of the bot )"
+					}
+#################################################################################################################
+
+
+############################################# IRC STARTUP STUFF #################################################
+irc 		= socket.socket ( socket.AF_INET, socket.SOCK_STREAM )						# Initiates the IRC data.
+irc.connect( ( network, port ) )														# Then connects to IRC with the network and port variables
+
+NICK       	= b"NICK " + name + " \r\n"                                     			# Puts the name into a variable with all the IRC stuff around it.
+USER        = b"USER " + name + b" " + name + b" " + name + b" :Uptone Software\r\n"	# Does the same for the user
+JOIN        = b"JOIN #" + channel + b"\r\n"                                      		# and the channel
+
+irc.send( NICK )   																		# Gives the BOT its name
+irc.send( USER )    																	# And gives it its credentials
+irc.send( JOIN )    																	# Then joins the channel
+################################################################################################################
+
+
+############################################ MAIN LOOP #########################################################
+#	This is the loop that does everything
+#	It gets all the data, puts it into variables, check's if its a command.
+while True:       	                                     			# While True: is just an infinite loop. So the bot ( should ) never dis-connect.
+	data            = irc.recv( 4096 )                  			# Puts all the recieved data into a variable
+	
+	print( data )
+
+	dt 				= re.match(":(?P<User>.*?)!~?(?P<Host>.*?)\s(?P<Command>.*?)\s(?P<Channel>.*?):(?P<Message>.*)\\r", data)
+																	# Regex for all the data from IRC.
+
+	if data[0:4] == "PING":											# If PING is found in the data.
+		reg 		= re.match(".*?:(?P<server>.*)", data)			# find what server PINGED the bot.
+		
+		if reg:														# If a server is found.
+			server 		= reg.group( "server")						# Put the server name into a variable.
+			irc.send("PONG " + server + "\r\n")						# Then ping the server back.
+			print("Pong" + server)
+
+	if dt:															# if the main RegEx is a match
+		user 			= dt.group("User")							# puts the user into a variable
+		host 			= dt.group("Host")							# puts the host into the variable
+		command 		= dt.group("Command")						# puts the command into a variable
+		channel 		= dt.group("Channel")						# puts the channel into a variable
+		message 		= dt.group("Message")						# puts the message into the variable.
+		bot_command 	= message[:commandLength] 					# puts the bot command into a variable
+		params 			= message[commandLength:]					# trims out the bot command from the params
+		params			= params.split(" ")							# splits the bot command into params
+		full 			= ""										# initiates a variable for later use.
+
+	
+
+
+		for value in params[1:]:									
+			if full 		== "":
+				full 		= value
+			else:
+				full 		= full + " " + value
+
+
+
+		if command == "INVITE":
+			irc.send("JOIN " + message + "\r\n")
+			print( message)
+
+		if bot_command	== bot_cmd:
+			if is_command( params[0].lower() ):
+				if commands[ params[0].lower() ]():
+					irc.send("PRIVMSG " + channel + ":You are not my master, " + user + "\r\n" )
+
+			else:
+				irc.send("PRIVMSG " + channel + ":Sorry, this is not a registered command. Please use " + bot_cmd + "commands for a list of commands.\r\n")
+
+									
+####################################################################################################################
+
+
+# Thanks for using Uptone Software :) 
+############################################## END OF PROGRAM ######################################################
