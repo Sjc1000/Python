@@ -43,9 +43,18 @@ weapons 		= [
 	"a Hyper beam.",
 	"a short drop and a sudden stop.",
 	"a spoon, because knives are too easy.",
-	"a bowtie."
+	"a bowtie.",
+	"tlm.",
+	"a rraaaiiinnboww trout.",
+	"bordem."
 
 ]
+
+trusted_channels 	= {
+	"#ahk",
+	"#ahkscript",
+	"#Sjc_Bot"
+}
 ##################################################################################################################
 
 
@@ -55,25 +64,27 @@ weapons 		= [
 def google_search( query ):
 	search 			= query.replace(" ", "+")
 
-
-	url				= 'http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=' + search 
-	hdr 			= {'User-Agent': 'Mozilla/5.0'} 
-	request 		= urllib2.Request( url, headers=hdr)
-	response 		= urllib2.urlopen( request)
+	try:
+		url				= 'http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=' + search 
+		hdr 			= {'User-Agent': 'Mozilla/5.0'} 
+		request 		= urllib2.Request( url, headers=hdr)
+		response 		= urllib2.urlopen( request)
 	
-	html			= response.read()
+		html			= response.read()
 
-	output 			= json.loads( html)
-
-	title 			= output['responseData']['results'][0]['titleNoFormatting']
-	url 			= output['responseData']['results'][0]['url']
+		output 			= json.loads( html)
+		title 			= output['responseData']['results'][0]['titleNoFormatting']
+		url 			= output['responseData']['results'][0]['url']
 	
-	url 			= urllib.unquote( url)
-	title 			= urllib.unquote( title)
+		url 			= urllib.unquote( url).encode('utf-8')
+		title 			= urllib.unquote( title).encode('utf-8')
 
-	return title + " - " + url
+		return "\x02" + title + "\x02 - " + url
+	except:
+		return "\x02\x035No Data found\x02\x03"
+
 #################################################################################################################
-	
+
 def is_command( cmd ):
 	try:
 		check 			= commands[ cmd]
@@ -83,15 +94,18 @@ def is_command( cmd ):
 		return True
 
 #################################################################################################################
+
 def func_hello():
     irc.send( b"PRIVMSG " + channel + b" :Hi, " + user + b".\r\n")
 
 #################################################################################################################
+
 def func_g():
 	data 			= google_search( full )
-	irc.send( b"PRIVMSG " + channel + b" :" + data + "\r\n")
+	irc.send( b"PRIVMSG " + channel + " :" + data + "\r\n")
 
 #################################################################################################################
+
 def func_ahk():
 	query 			= "" +  urllib.quote( full )  + "&cx=009062493091172133168:_o2f4moc9ce"
 	data 			= google_search( query )
@@ -120,13 +134,10 @@ def func_imdb():
 		irc.send( "PRIVMSG " + channel + " :" + data + "\r\n")
 	
 	except:
-		irc.send( "PRIVMSG " + channel + " :No data found\r\n")
-
-
-
-
+		irc.send( "PRIVMSG " + channel + " :\x035No data found\x03\r\n")
 
 #################################################################################################################
+
 def func_kill():
 	try:
 		person 			= params[1]
@@ -143,33 +154,44 @@ def func_kill():
 		weapon 		= random.choice( weapons)
 
 	irc.send("PRIVMSG " + channel + ":\x01action Kills " + person + " with " + weapon + "\x01\r\n")
+
 #################################################################################################################
 
 def func_commands():
-	for x in command_list:
-		irc.send("PRIVMSG " + user + " :" + x + " - " + command_list[x] + "\r\n")
+	try:
+		person 			= params[1]
+	except:
+		person 			= user
 
+	for x in command_list:
+		irc.send("PRIVMSG " + person + " :" + x + " - " + command_list[x] + "\r\n")
 
 #################################################################################################################
-def master_join():
-    if host.find( master) == -1:
-        return 1
 
-    irc.send( b"JOIN " + params[1] + b"\r\n" )
+def master_join():
+	if host.find( master) == -1:
+		return 1
+
+	for x in params[1:]:
+		irc.send( "JOIN " + x + b"\r\n" )
  
 #################################################################################################################
-def master_leave():
-    if host.find( master) == -1:
-        return 1
 
-    irc.send( b"PART " + params[1] + b"\r\n")
+def master_leave():
+	if host.find( master) == -1:
+		return 1
+
+	for x in params[1:]:
+		irc.send( b"PART " + x + b"\r\n")
 
 #################################################################################################################
+
 def master_nick():
 	if host.find( master) == -1:
 		return 1
 	
 	irc.send( b"NICK " + params[1] + b"\r\n" )
+
 #################################################################################################################
 
 
@@ -235,7 +257,6 @@ while True:       	                                     			# While True: is just
 		if reg:														# If a server is found.
 			server 		= reg.group( "server")						# Put the server name into a variable.
 			irc.send("PONG " + server + "\r\n")						# Then ping the server back.
-			print("Pong" + server)
 
 	if dt:															# if the main RegEx is a match
 		user 			= dt.group("User")							# puts the user into a variable
@@ -260,16 +281,18 @@ while True:       	                                     			# While True: is just
 
 
 		if command == "INVITE":
-			irc.send("JOIN " + message + "\r\n")
-			print( message)
+			for x in trusted_channels:
+				if x == message:
+					irc.send("JOIN " + message + "\r\n")
+			
 
 		if bot_command	== bot_cmd:
 			if is_command( params[0].lower() ):
 				if commands[ params[0].lower() ]():
-					irc.send("PRIVMSG " + channel + ":You are not my master, " + user + "\r\n" )
+					irc.send("PRIVMSG " + channel + ":\x035\x02You are not my master, " + user + "\x02\x03\r\n" )
 
 			else:
-				irc.send("PRIVMSG " + channel + ":Sorry, this is not a registered command. Please use " + bot_cmd + "commands for a list of commands.\r\n")
+				irc.send("PRIVMSG " + channel + ":\x02Sorry, this is \x035not a registered command.\x03 Please use \x035" + bot_cmd + "commands\x03 for a list of commands.\x02\r\n")
 
 									
 ####################################################################################################################
