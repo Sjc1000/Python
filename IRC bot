@@ -114,27 +114,8 @@ def func_ahk():
 #################################################################################################################
 
 def func_imdb():
-	search 			= full.replace(" ", "+")
-
-	url 			= "http://www.omdbapi.com/?t=" + search
-	hdr 			= {'User-Agent': 'Mozilla/5.0'} 
-	request 		= urllib2.Request( url, headers=hdr)
-	response 		= urllib2.urlopen( request)
-
-	html			= response.read()
-	output 			= json.loads( html)
-
-	try:
-		title 			= output['Title']
-		year 			= output['Year']
-		plot 			= output['Plot']
-		url 			= "http://www.imdb.com/showtimes/title/" + output['imdbID']
-
-		data 			= title + "(" + year + ") " + plot + " - " + url
-		irc.send( "PRIVMSG " + channel + " :" + data + "\r\n")
-	
-	except:
-		irc.send( "PRIVMSG " + channel + " :\x035No data found\x03\r\n")
+	data 			= google_search( "imdb: " + full )
+	irc.send( "PRIVMSG " + channel + " :" + data + "\r\n")
 
 #################################################################################################################
 
@@ -155,6 +136,19 @@ def func_kill():
 
 	irc.send("PRIVMSG " + channel + ":\x01action Kills " + person + " with " + weapon + "\x01\r\n")
 
+#http://api.wolframalpha.com/v2/query?input=5*5&appid=9HX9YX-HJHHPWPVK4
+def func_wa():
+	url				= 'http://api.wolframalpha.com/v2/query?input='  +  urllib.quote( full )  + '&appid=9HX9YX-HJHHPWPVK4' 
+	hdr 			= {'User-Agent': 'Mozilla/5.0'} 
+	request 		= urllib2.Request( url, headers=hdr)
+	response 		= urllib2.urlopen( request)
+	
+	html			= response.read()
+	print( html )
+	
+
+
+
 #################################################################################################################
 
 def func_commands():
@@ -164,7 +158,9 @@ def func_commands():
 		person 			= user
 
 	for x in command_list:
-		irc.send("PRIVMSG " + person + " :" + x + " - " + command_list[x] + "\r\n")
+		sendList 		= sendList + "|" + x
+
+	irc.send("PRIVMSG " + channel + ":Here is a list of commands -" + sendList + "\r\n") 
 
 #################################################################################################################
 
@@ -205,6 +201,7 @@ commands        = { b"hey"		: func_hello,
 					b"ahk"		: func_ahk,
 					b"imdb"		: func_imdb,
 					b"kill"		: func_kill,
+					b"wa"		: func_wa,
 					b"commands"	: func_commands,
                     b"join"		: master_join,
                     b"leave"	: master_leave,
@@ -218,6 +215,7 @@ command_list 	= { b"hey" 		: b"This will make the bot say hello back to the user
 					b"ahk"		: b"Searches google for an AHK related query",
 					b"imdb"		: b"Searched imdb for a movie and shows data.",
 					b"kill"		: "Kills someone with a random or specified weapon.",
+					"wa"		: "Searches Wolfram Alpha for something",
 					"commands"	: "Gives a list of commands.",
 					b"join" 	: b" Only usable by the bots master. It will join a channel",
 					b"leave" 	: b" Only usable by the bots master. It will leave a channel",
