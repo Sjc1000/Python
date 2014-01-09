@@ -158,9 +158,7 @@ def func_commands():
 		person 			= user
 
 	for x in command_list:
-		sendList 		= sendList + "|" + x
-
-	irc.send("PRIVMSG " + channel + ":Here is a list of commands -" + sendList + "\r\n") 
+		irc.send("PRIVMSG " + person + " :" + x + " - " + command_list[x] + "\r\n")
 
 #################################################################################################################
 
