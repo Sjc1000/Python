@@ -362,9 +362,6 @@ while 1:
 					if commands[ params[0].lower() ]():
 						irc.send("PRIVMSG " + channel + ":\x035\x02You are not my master, " + user + "\x02\x03\r\n" )
 
-				else:
-					continue
-
 									
 ####################################################################################################################
 
