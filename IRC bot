@@ -16,21 +16,22 @@ import json
 import urllib2
 import urllib
 import random
+import sys
 #################################################################################################################
 
 
 ############################################## USER VARIABLES ###################################################
 #	Feel free to change all of these, they were put in variables like this so you can easily change them
 # 	without having to change raw code.
-network     	= 'irc.freenode.net'          	# The network to join to          	
-port        	= 6667                         	# The port to join on ( 6667 is default )
+network     	= 'irc.freenode.net'          	# The network to join to.	
+port        	= 6667                         	# The port to join on ( 6667 is default ).
 
-channel     	= "Sjc_Bot"                   	# The channel to start on
-name        	= "sjBot"                    	# The name to start with
-bot_cmd     	= ">>"                        	# The command, so the bot knows its being told to do something.
-master      	= "@unaffiliated/sjc1000"    	# The master of the bot ( the one who can use the master commands )
+channels     	= [ "ahkscript", "Sjc_Bot" ]  	# The channel to start on.
+name        	= "sjBot"                    	# The name to start with.
+bot_cmd     	= "!"                        	# The command, so the bot knows its being told to do something.
+master      	= "@unaffiliated/sjc1000"    	# The master of the bot ( the one who can use the master commands ).
 
-commandLength	= len( bot_cmd)					# Gets the length of the bot command
+commandLength	= len( bot_cmd)					# Gets the length of the bot command.
 ##################################################################################################################
 
 
@@ -53,7 +54,13 @@ weapons 		= [
 trusted_channels 	= {
 	"#ahk",
 	"#ahkscript",
-	"#Sjc_Bot"
+	"#Sjc_Bot",
+	"#twdev.net"
+}
+
+activation_command 	= {
+	"ahk" 			: ">>",
+	"Sjc_Bot"		: ">>"
 }
 ##################################################################################################################
 
@@ -79,9 +86,30 @@ def google_search( query ):
 		url 			= urllib.unquote( url).encode('utf-8')
 		title 			= urllib.unquote( title).encode('utf-8')
 
+		if len( url ) > 25:
+			url 		= shortenUrl( url )
+
 		return "\x02" + title + "\x02 - " + url
 	except:
 		return "\x02\x035No Data found\x02\x03"
+
+#################################################################################################################
+# 	http://tiny-url.info/api/v1/create?url=https://www.google.com&provider=clicky_me&apikey=C77889685I98640AA4I
+def shortenUrl( url ):
+	mUrl 			= "http://tiny-url.info/api/v1/create?url=" +  url + "&provider=clicky_me&apikey=C77889685I98640AA4I&format=json"
+	hdr 			= {'User-Agent': 'Mozilla/5.0'} 
+	request 		= urllib2.Request( mUrl, headers=hdr)
+	response 		= urllib2.urlopen( request)
+	
+	html			= response.read()
+	output 			= json.loads( html)
+
+	reData 			= output['shorturl']
+
+	if reData:
+		return reData
+	else:
+		return url
 
 #################################################################################################################
 
@@ -136,18 +164,46 @@ def func_kill():
 
 	irc.send("PRIVMSG " + channel + ":\x01action Kills " + person + " with " + weapon + "\x01\r\n")
 
-#http://api.wolframalpha.com/v2/query?input=5*5&appid=9HX9YX-HJHHPWPVK4
+#################################################################################################################
+
 def func_wa():
-	url				= 'http://api.wolframalpha.com/v2/query?input='  +  urllib.quote( full )  + '&appid=9HX9YX-HJHHPWPVK4' 
-	hdr 			= {'User-Agent': 'Mozilla/5.0'} 
-	request 		= urllib2.Request( url, headers=hdr)
-	response 		= urllib2.urlopen( request)
-	
-	html			= response.read()
-	print( html )
-	
+	try:
+		url				= 'http://api.wolframalpha.com/v2/query?input='  +  urllib.quote( full )  + '&appid=9HX9YX-HJHHPWPVK4' 
+		hdr 			= {'User-Agent': 'Mozilla/5.0'} 
+		request 		= urllib2.Request( url, headers=hdr)
+		response 		= urllib2.urlopen( request)
+		
+		html			= response.read()
+		res 			= re.findall('<plaintext>(.*?)</plaintext>', html )
+		output 			= "\x02" + res[0] + "\x02 - " + res[1]
+		irc.send("PRIVMSG " + channel + " :" + output + "\r\n") 
+	except:
+		return "\x02\x035No Data found\x02\x03"
 
+#################################################################################################################
 
+def func_ud():
+	try:
+		search 			= full.replace(" ", "+")
+		url 			= "http://urbanscraper.herokuapp.com/define/" + search + ".json"
+		hdr 			= {'User-Agent': 'Mozilla/5.0'} 
+		request 		= urllib2.Request( url, headers=hdr)
+		response 		= urllib2.urlopen( request)
+		
+		html			= response.read()
+
+		output 			= json.loads( html)
+
+		irc.send( "PRIVMSG " + channel + " :\x02" + output["word"] + "\x02 - " + output["definition"].replace("\n","") + "\r\n")
+	except:
+		irc.send( "PRIVMSG " + channel + ":\x02\x035No Data found\x02\x03\r\n")
+
+#################################################################################################################
+
+def func_wiki():
+	search 				= full.replace(" ", "+")
+	result 				= google_search("wiki: " + search)
+	irc.send( "PRIVMSG " + channel + " :" + result + "\r\n")
 
 #################################################################################################################
 
@@ -186,6 +242,9 @@ def master_nick():
 	
 	irc.send( b"NICK " + params[1] + b"\r\n" )
 
+
+def master_kill():
+	sys.exit()
 #################################################################################################################
 
 
@@ -200,95 +259,111 @@ commands        = { b"hey"		: func_hello,
 					b"imdb"		: func_imdb,
 					b"kill"		: func_kill,
 					b"wa"		: func_wa,
+					b"ud"		: func_ud,
+					b"wiki"		: func_wiki,
 					b"commands"	: func_commands,
                     b"join"		: master_join,
                     b"leave"	: master_leave,
-					b"nick"		: master_nick
+					b"nick"		: master_nick,
+					b"stop"		: master_kill
                    }
 				   
 				   
-command_list 	= { b"hey" 		: b"This will make the bot say hello back to the user.",
-					b"hi" 		: b"The same as Hey",
-					b"g"		: b"Searches google for a query",
-					b"ahk"		: b"Searches google for an AHK related query",
-					b"imdb"		: b"Searched imdb for a movie and shows data.",
-					b"kill"		: "Kills someone with a random or specified weapon.",
+command_list 	= { "hey" 		: "This will make the bot say hello back to the user.",
+					"hi" 		: "The same as Hey",
+					"g"			: "Searches google for a query",
+					"ahk"		: "Searches google for an AHK related query",
+					"imdb"		: "Searched imdb for a movie and shows data.",
+					"kill"		: "Kills someone with a random or specified weapon.",
 					"wa"		: "Searches Wolfram Alpha for something",
+					"ud"		: "Searches the Urban Dictionary for something.",
+					"wiki"		: "Searches for a wiki article on the search.",
 					"commands"	: "Gives a list of commands.",
-					b"join" 	: b" Only usable by the bots master. It will join a channel",
-					b"leave" 	: b" Only usable by the bots master. It will leave a channel",
-					b"nick" 	: b" Only usable by the bots master. It will change the bot's nickname ( only for the current iteration of the bot )"
+					"join" 		: " Only usable by the bots master. It will join a channel",
+					"leave" 	: " Only usable by the bots master. It will leave a channel",
+					"nick" 		: " Only usable by the bots master. It will change the bot's nickname ( only for the current iteration of the bot )",
+					"stop"		: " Only usable by the bots master. It will stop the bot."
 					}
 #################################################################################################################
 
 
 ############################################# IRC STARTUP STUFF #################################################
 irc 		= socket.socket ( socket.AF_INET, socket.SOCK_STREAM )						# Initiates the IRC data.
-irc.connect( ( network, port ) )														# Then connects to IRC with the network and port variables
+irc.connect( ( network, port ) )														# Then connects to IRC with the network and port variables.
 
 NICK       	= b"NICK " + name + " \r\n"                                     			# Puts the name into a variable with all the IRC stuff around it.
-USER        = b"USER " + name + b" " + name + b" " + name + b" :Uptone Software\r\n"	# Does the same for the user
-JOIN        = b"JOIN #" + channel + b"\r\n"                                      		# and the channel
+USER        = b"USER " + name + b" " + name + b" " + name + b" :Uptone Software\r\n"	# Does the same for the user.
 
-irc.send( NICK )   																		# Gives the BOT its name
-irc.send( USER )    																	# And gives it its credentials
-irc.send( JOIN )    																	# Then joins the channel
+
+irc.send( NICK )   																		# Gives the BOT its name.
+irc.send( USER )																		# And gives it its credentials.
+for x in channels:
+	irc.send("JOIN #" + x + "\r\n")														# Then joins the channel[s].
+
+irc.send( "PRIVMSG Nickserv :Identify sjBot sjPass \r\n")
 ################################################################################################################
 
 
 ############################################ MAIN LOOP #########################################################
 #	This is the loop that does everything
 #	It gets all the data, puts it into variables, check's if its a command.
-while True:       	                                     			# While True: is just an infinite loop. So the bot ( should ) never dis-connect.
-	data            = irc.recv( 4096 )                  			# Puts all the recieved data into a variable
+while 1:   
+	print("outer loop")    	                                  
+	while 1:                									
 	
-	print( data )
+		data 			= irc.recv(1128)
+		print( data )
 
-	dt 				= re.match(":(?P<User>.*?)!~?(?P<Host>.*?)\s(?P<Command>.*?)\s(?P<Channel>.*?):(?P<Message>.*)\\r", data)
-																	# Regex for all the data from IRC.
+		dt 				= re.match(":(?P<User>.*?)!~?(?P<Host>.*?)\s(?P<Command>.*?)\s(?P<Channel>.*?)\s:(?P<Message>.*)\\r", data)
+																		# Regex for all the data from IRC.
 
-	if data[0:4] == "PING":											# If PING is found in the data.
-		reg 		= re.match(".*?:(?P<server>.*)", data)			# find what server PINGED the bot.
-		
-		if reg:														# If a server is found.
-			server 		= reg.group( "server")						# Put the server name into a variable.
-			irc.send("PONG " + server + "\r\n")						# Then ping the server back.
+		if data[0:4] == "PING":											# If PING is found in the data.
+			irc.send("PONG :" + data[6:] + " \r\n")						# Then ping the server back.
 
-	if dt:															# if the main RegEx is a match
-		user 			= dt.group("User")							# puts the user into a variable
-		host 			= dt.group("Host")							# puts the host into the variable
-		command 		= dt.group("Command")						# puts the command into a variable
-		channel 		= dt.group("Channel")						# puts the channel into a variable
-		message 		= dt.group("Message")						# puts the message into the variable.
-		bot_command 	= message[:commandLength] 					# puts the bot command into a variable
-		params 			= message[commandLength:]					# trims out the bot command from the params
-		params			= params.split(" ")							# splits the bot command into params
-		full 			= ""										# initiates a variable for later use.
+		if dt:															# if the main RegEx is a match.
+			user 			= dt.group("User")							# puts the user into a variable.
+			host 			= dt.group("Host")							# puts the host into the variable.
+			command 		= dt.group("Command")						# puts the command into a variable.
+			channel 		= dt.group("Channel")						# puts the channel into a variable.
+			message 		= dt.group("Message")						# puts the message into the variable.
 
-	
+			if channel == name:
+				channel 	= user
 
 
-		for value in params[1:]:									
-			if full 		== "":
-				full 		= value
-			else:
-				full 		= full + " " + value
+			try:
+				position		= message.index( bot_cmd )
+				bot_command		= message[position:position + commandLength]
+				params 			= message[position + commandLength:]
+			except: 
+				bot_command 	= message[:commandLength] 					# puts the bot command into a variable
+				params 			= message[commandLength:]					# trims out the bot command from the params
+			
+			params				= params.split(" ")							# splits the bot command into params
+			full 				= ""										# initiates a variable for later use.
 
 
+			for value in params[1:]:									
+				if full 		== "":
+					full 		= value
+				else:
+					full 		= full + " " + value
 
-		if command == "INVITE":
-			for x in trusted_channels:
-				if x == message:
-					irc.send("JOIN " + message + "\r\n")
+
+			if command == "INVITE":
+				for x in trusted_channels:
+					if x == message:
+						irc.send("JOIN " + message + "\r\n")
 			
 
-		if bot_command	== bot_cmd:
-			if is_command( params[0].lower() ):
-				if commands[ params[0].lower() ]():
-					irc.send("PRIVMSG " + channel + ":\x035\x02You are not my master, " + user + "\x02\x03\r\n" )
 
-			else:
-				irc.send("PRIVMSG " + channel + ":\x02Sorry, this is \x035not a registered command.\x03 Please use \x035" + bot_cmd + "commands\x03 for a list of commands.\x02\r\n")
+			if bot_command	== bot_cmd:
+				if is_command( params[0].lower() ):
+					if commands[ params[0].lower() ]():
+						irc.send("PRIVMSG " + channel + ":\x035\x02You are not my master, " + user + "\x02\x03\r\n" )
+
+				else:
+					continue
 
 									
 ####################################################################################################################
