@@ -26,7 +26,7 @@ import sys
 network     	= 'irc.freenode.net'          	# The network to join to.	
 port        	= 6667                         	# The port to join on ( 6667 is default ).
 
-channels     	= [ "ahkscript", "Sjc_Bot" ]  	# The channel to start on.
+channels     	= [ "Sjc_Bot", "ahkscript" ]  	# The channel to start on.
 name        	= "sjBot"                    	# The name to start with.
 bot_cmd     	= "!"                        	# The command, so the bot knows its being told to do something.
 master      	= "@unaffiliated/sjc1000"    	# The master of the bot ( the one who can use the master commands ).
@@ -86,7 +86,7 @@ def google_search( query ):
 		url 			= urllib.unquote( url).encode('utf-8')
 		title 			= urllib.unquote( title).encode('utf-8')
 
-		if len( url ) > 25:
+		if len( url ) > 20:
 			url 		= shortenUrl( url )
 
 		return "\x02" + title + "\x02 - " + url
@@ -142,8 +142,54 @@ def func_ahk():
 #################################################################################################################
 
 def func_imdb():
-	data 			= google_search( "imdb: " + full )
-	irc.send( "PRIVMSG " + channel + " :" + data + "\r\n")
+	data 			 	= ""
+
+	try:
+
+		splitparam 		= params[1:].index('|')
+
+		search 			= '+'.join( params[1:splitparam + 1] )
+		data 			= ' '.join( params[splitparam + 2:] )
+
+
+		url				= 'http://www.omdbapi.com/?t=' + search
+		hdr 			= {'User-Agent': 'Mozilla/5.0'} 
+		request 		= urllib2.Request( url, headers=hdr)
+		response 		= urllib2.urlopen( request)
+	
+		html			= response.read()
+
+		output 			= json.loads( html)
+
+	
+		title 			= output['Title']							# &t
+		imdbRating		= output['imdbRating']						# &Ir
+		year			= output['Year']							# &y
+		rated 			= output['Rated']							# &r
+		released		= output['Released']						# &Re
+		runtime			= output['Runtime']							# &Ru
+		genre			= output['Genre']							# &g
+		plot 			= output['Plot']							# &p
+		link 			= "http://imdb.com/title/" + output["imdbID"]   	# &l
+
+		if data == "":
+			data 			= "&t ( &y ) - &r - &l"
+
+
+		data 				= data.replace("&t", title)
+		data 				= data.replace("&Ir", imdbRating)
+		data 				= data.replace("&y", year)
+		data 				= data.replace("&r", rated)
+		data 				= data.replace("&Re", released)
+		data 				= data.replace("&Ru", runtime)
+		data 				= data.replace("&g", genre)
+		data 				= data.replace("&p", plot)
+		data 				= data.replace("&l", link)
+
+
+		irc.send( "PRIVMSG " + channel + " :" + data + "\r\n")
+	except:
+		irc.send("PRIVMSG " + channel + " :\x02\x035No Data found\x02\x03\r\n")
 
 #################################################################################################################
 
@@ -154,6 +200,7 @@ def func_kill():
 		person 			= user
 
 
+
 	try:
 		weapon 		= "a " + params[2]
 	except:
@@ -162,7 +209,7 @@ def func_kill():
 	if weapon == "a ":
 		weapon 		= random.choice( weapons)
 
-	irc.send("PRIVMSG " + channel + ":\x01action Kills " + person + " with " + weapon + "\x01\r\n")
+	irc.send("PRIVMSG " + channel + " :\x01action Kills " + person + " with " + weapon + "\x01\r\n")
 
 #################################################################################################################
 
@@ -306,61 +353,59 @@ irc.send( "PRIVMSG Nickserv :Identify sjBot sjPass \r\n")
 
 ############################################ MAIN LOOP #########################################################
 #	This is the loop that does everything
-#	It gets all the data, puts it into variables, check's if its a command.
-while 1:   
-	print("outer loop")    	                                  
-	while 1:                									
+#	It gets all the data, puts it into variables, check's if its a command.	                                  
+while 1:                									
 	
-		data 			= irc.recv(1128)
-		print( data )
+	data 			= irc.recv(1024)
+	print( data )
 
-		dt 				= re.match(":(?P<User>.*?)!~?(?P<Host>.*?)\s(?P<Command>.*?)\s(?P<Channel>.*?)\s:(?P<Message>.*)\\r", data)
+	dt 				= re.match(":(?P<User>.*?)!~?(?P<Host>.*?)\s(?P<Command>.*?)\s(?P<Channel>.*?)\s:(?P<Message>.*)\\r", data)
 																		# Regex for all the data from IRC.
 
-		if data[0:4] == "PING":											# If PING is found in the data.
-			irc.send("PONG :" + data[6:] + " \r\n")						# Then ping the server back.
+	if data[0:4] == "PING":											# If PING is found in the data.
+		irc.send("PONG :" + data[6:] + " \r\n")						# Then ping the server back.
 
-		if dt:															# if the main RegEx is a match.
-			user 			= dt.group("User")							# puts the user into a variable.
-			host 			= dt.group("Host")							# puts the host into the variable.
-			command 		= dt.group("Command")						# puts the command into a variable.
-			channel 		= dt.group("Channel")						# puts the channel into a variable.
-			message 		= dt.group("Message")						# puts the message into the variable.
+	if dt:															# if the main RegEx is a match.
+		user 			= dt.group("User")							# puts the user into a variable.
+		host 			= dt.group("Host")							# puts the host into the variable.
+		command 		= dt.group("Command")						# puts the command into a variable.
+		channel 		= dt.group("Channel")						# puts the channel into a variable.
+		message 		= dt.group("Message")						# puts the message into the variable.
 
-			if channel == name:
-				channel 	= user
+		if channel == name:
+			channel 	= user
 
 
-			try:
-				position		= message.index( bot_cmd )
-				bot_command		= message[position:position + commandLength]
-				params 			= message[position + commandLength:]
-			except: 
-				bot_command 	= message[:commandLength] 					# puts the bot command into a variable
-				params 			= message[commandLength:]					# trims out the bot command from the params
+		try:
+			position		= message.index( bot_cmd )
+			bot_command		= message[position:position + commandLength]
+			params 			= message[position + commandLength:]
+		except: 
+			bot_command 	= message[:commandLength] 					# puts the bot command into a variable
+			params 			= message[commandLength:]					# trims out the bot command from the params
 			
-			params				= params.split(" ")							# splits the bot command into params
-			full 				= ""										# initiates a variable for later use.
+		params				= params.split(" ")							# splits the bot command into params
+		full 				= ""										# initiates a variable for later use.
 
 
-			for value in params[1:]:									
-				if full 		== "":
-					full 		= value
-				else:
-					full 		= full + " " + value
+		for value in params[1:]:									
+			if full 		== "":
+				full 		= value
+			else:
+				full 		= full + " " + value
 
 
-			if command == "INVITE":
-				for x in trusted_channels:
-					if x == message:
-						irc.send("JOIN " + message + "\r\n")
+		if command == "INVITE":
+			for x in trusted_channels:
+				if x == message:
+					irc.send("JOIN " + message + "\r\n")
 			
 
 
-			if bot_command	== bot_cmd:
-				if is_command( params[0].lower() ):
-					if commands[ params[0].lower() ]():
-						irc.send("PRIVMSG " + channel + ":\x035\x02You are not my master, " + user + "\x02\x03\r\n" )
+		if bot_command	== bot_cmd:
+			if is_command( params[0].lower() ):
+				if commands[ params[0].lower() ]():
+					irc.send("PRIVMSG " + channel + ":\x035\x02You are not my master, " + user + "\x02\x03\r\n" )
 
 									
 ####################################################################################################################
