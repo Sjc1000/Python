@@ -178,7 +178,7 @@ def func_imdb():
 	plot 			= output['Plot']							# &p
 	link 			= "http://imdb.com/title/" + output["imdbID"]   	# &l
 
-	if !data:
+	if data == "":
 		data 			= "&t ( &y ) - &r - &l"
 
 
