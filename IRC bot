@@ -67,7 +67,28 @@ apiKeys				= {
 	"ahk": "009062493091172133168:_o2f4moc9ce",
 	"wolfram": "9HX9YX-HJHHPWPVK4"
 }
+##################################################################################################################
 
+
+##################################################################################################################
+swearChannels 		= [
+	'#ahkscript',
+	'#uptone'
+]
+
+
+swearWords 			= [  # add a + after each letter, for the RegEx.
+	".*?f+u+c+k+.*?",
+	".*?c+u+n+t+.*?",
+	".*?d+i+c+k+.*?",
+	".*?s+l+u+t+.*?"
+]
+swearResponse 		= [				# &u is the user that swore.
+	"Please don't swear &u.",
+	"Hey &u, Please don't swear.",
+	"&u, This is a PG channel, keep it clean please.",
+	"Keep it clean &u."
+]
 ##################################################################################################################
 
 
@@ -148,14 +169,22 @@ def func_ahk():
 #################################################################################################################
 
 def func_imdb():
-	data 			 	= ""
+	data 			 	= " "
 
+	try:
+		splitparam		= params[1:].index('|')
+	except:
+		splitparam		= len( params[1:] )
+	else:
+		splitparam		= params[1:].index('|')
 
+	if data == " ":
+		data 			= "&t ( &y ) - &l"
+	else:
+		data 			= ' '.join( params[splitparam + 2:] )
 
-	splitparam 		= params[1:].index('|')
 
 	search 			= '+'.join( params[1:splitparam + 1] )
-	data 			= ' '.join( params[splitparam + 2:] )
 
 
 	url				= 'http://www.omdbapi.com/?t=' + search
@@ -178,8 +207,6 @@ def func_imdb():
 	plot 			= output['Plot']							# &p
 	link 			= "http://imdb.com/title/" + output["imdbID"]   	# &l
 
-	if data == "":
-		data 			= "&t ( &y ) - &r - &l"
 
 
 	data 				= data.replace("&t", title )
@@ -295,7 +322,13 @@ def master_nick():
 		return 1
 	
 	irc.send( b"NICK " + params[1] + b"\r\n" )
+	name 		= params[1]
 
+	greetings 			= [
+	".*?h+e+y+ " + name + ".*?",
+	".*?h+i+ " + name + ".*?",
+	".*?" + name + ".*+h+i+.*?"
+	]
 
 def master_kill():
 	sys.exit()
@@ -357,14 +390,13 @@ for x in channels:
 irc.send( "PRIVMSG Nickserv :Identify sjBot sjPass \r\n")
 ################################################################################################################
 
-
 ############################################ MAIN LOOP #########################################################
 #	This is the loop that does everything
 #	It gets all the data, puts it into variables, check's if its a command.	                                  
 data 				= 1
 
 while data:                									
-	
+
 	data 			= irc.recv(1024)
 
 	dt 				= re.match(":(?P<User>.*?)!~?(?P<Host>.*?)\s(?P<Command>.*?)\s(?P<Channel>.*?)\s:(?P<Message>.*)\\r", data)
@@ -379,6 +411,21 @@ while data:
 		command 		= dt.group("Command")						# puts the command into a variable.
 		channel 		= dt.group("Channel")						# puts the channel into a variable.
 		message 		= dt.group("Message")						# puts the message into the variable.
+
+
+		#####################################################################################################
+		for x in swearWords:
+			sw 				= re.match( x, message )
+
+			for x in swearChannels:
+				if x == channel:
+
+					if sw:
+						response 		= random.choice( swearResponse)
+						response 		= response.replace("&u", user)
+						irc.send("PRIVMSG " + channel + " :" + response + " \r\n")
+		######################################################################################################
+
 
 		if channel == name:
 			channel 	= user
@@ -417,7 +464,6 @@ while data:
 
 									
 ####################################################################################################################
-
 
 # Thanks for using Uptone Software :) 
 ############################################## END OF PROGRAM ######################################################
