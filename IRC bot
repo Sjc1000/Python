@@ -186,44 +186,43 @@ def func_imdb():
 
 	search 			= '+'.join( params[1:splitparam + 1] )
 
+	try:
+		url				= 'http://www.omdbapi.com/?t=' + search
+		hdr 			= {'User-Agent': 'Mozilla/5.0'} 
+		request 		= urllib2.Request( url, headers=hdr)
+		response 		= urllib2.urlopen( request)
+		
+		html			= response.read()
 
-	url				= 'http://www.omdbapi.com/?t=' + search
-	hdr 			= {'User-Agent': 'Mozilla/5.0'} 
-	request 		= urllib2.Request( url, headers=hdr)
-	response 		= urllib2.urlopen( request)
-	
-	html			= response.read()
+		output 			= json.loads( html)
 
-	output 			= json.loads( html)
-
-	
-	title 			= output['Title']							# &t
-	imdbRating		= output['imdbRating']						# &Ir
-	year			= output['Year']							# &y
-	rated 			= output['Rated']							# &r
-	released		= output['Released']						# &Re
-	runtime			= output['Runtime']							# &Ru
-	genre			= output['Genre']							# &g
-	plot 			= output['Plot']							# &p
-	link 			= "http://imdb.com/title/" + output["imdbID"]   	# &l
+		
+		title 			= output['Title']							# &t
+		imdbRating		= output['imdbRating']						# &Ir
+		year			= output['Year']							# &y
+		rated 			= output['Rated']							# &r
+		released		= output['Released']						# &Re
+		runtime			= output['Runtime']							# &Ru
+		genre			= output['Genre']							# &g
+		plot 			= output['Plot']							# &p
+		link 			= "http://imdb.com/title/" + output["imdbID"]   	# &l
 
 
 
-	data 				= data.replace("&t", title )
-	data 				= data.replace("&Ir", imdbRating )
-	data 				= data.replace("&y", year )
-	data 				= data.replace("&r", rated )
-	data 				= data.replace("&Re", released )
-	data 				= data.replace("&Ru", runtime )
-	data 				= data.replace("&g", genre )
-	data 				= data.replace("&p", plot )
-	data 				= data.replace("&l", link )
+		data 				= data.replace("&t", title )
+		data 				= data.replace("&Ir", imdbRating )
+		data 				= data.replace("&y", year )
+		data 				= data.replace("&r", rated )
+		data 				= data.replace("&Re", released )
+		data 				= data.replace("&Ru", runtime )
+		data 				= data.replace("&g", genre )
+		data 				= data.replace("&p", plot )
+		data 				= data.replace("&l", link )
 
-	if data != "":
-		irc.send( "PRIVMSG " + channel + " :" + data + "\r\n")
-	else:
+	except:
 		irc.send("PRIVMSG " + channel + " :\x02\x035No Data found\x02\x03\r\n")
-
+	else:
+		irc.send( "PRIVMSG " + channel + " :" + data + "\r\n")
 #################################################################################################################
 
 def func_kill():
