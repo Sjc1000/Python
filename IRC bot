@@ -27,7 +27,7 @@ import sys
 network     	= 'irc.freenode.net'          	# The network to join to.	
 port        	= 6667                         	# The port to join on ( 6667 is default ).
 
-botName        	= "sjBots"                    	# The name to start with.
+botName        	= "sjBot"                    	# The name to start with.
 bot_cmd     	= "!"                        	# The command, so the bot knows its being told to do something.
 master      	= "@unaffiliated/sjc1000"    	# The master of the bot ( the one who can use the master commands ).
 
