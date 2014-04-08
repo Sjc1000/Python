@@ -29,7 +29,7 @@ port        	= 6667                         	# The port to join on ( 6667 is def
 
 botName        	= "sjBot"                    	# The name to start with.
 bot_cmd     	= "!"                        	# The command, so the bot knows its being told to do something.
-master      	= "@unaffiliated/sjc1000"    	# The master of the bot ( the one who can use the master commands ).
+master      	= "Sjc1000@unaffiliated/sjc1000"    	# The master of the bot ( the one who can use the master commands ).
 
 commandLength	= len( bot_cmd)					# Gets the length of the bot command.
 password 		= "a1b2c3d4e5"
@@ -74,7 +74,7 @@ apiKeys				= {
 
 ##################################################################################################################
 def google_search( query ):
-	search 			= query.replace(" ", "+")
+	search 			= query.replace(" ", "%20")
 
 	try:
 		url				= 'http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=' + search 
@@ -126,15 +126,18 @@ def google():
 
 
 def math():
-	outputData 		= str( eval( paramData ) )
-	irc.send("PRIVMSG " + channel + " :\x02" + paramData + "\x02 - " + outputData + "\r\n")
+	try:
+		outputData 		= str( eval( paramData ) )
+		irc.send("PRIVMSG " + channel + " :\x02" + paramData + "\x02 - " + outputData + "\r\n")
+	except:
+		irc.send("PRIVMSG " + channel + " :Sorry, i cannot solve that.\r\n")
 
 
 def kill():
 	killWho 			= paramData
 	killWith 			= random.choice( weapons )
 
-	irc.send("PRIVMSG " + channel + " :\x01action Kills " + killWho + " with " + killWith + "\r\n")
+	irc.send("PRIVMSG " + channel + " :\x01ACTION Kills " + killWho + " with " + killWith + "\x01\r\n")
 
 def wolfram():
 	url				= 'http://api.wolframalpha.com/v2/query?input='  +  urllib.quote( paramData )  + '&appid=' + apiKeys["wolfram"]
@@ -199,11 +202,11 @@ def weather():
 
 		if winddirection > 45 and winddirection < 135:
 			winddirection	= "coming from the west" 
-		if winddirection > 135 and winddirection < 225 :
+		if winddirection > 135 and winddirection < 225:
 			winddirection 	= "coming from the north"
-		if winddirection > 225 and winddirection < 315 :
+		if winddirection > 225 and winddirection < 315:
 			winddirection	= "coming from the east"
-		if winddirection > 315 and winddirection < 360 :
+		if winddirection > 315 and winddirection < 360:
 			winddirection 	= "coming from the south"
 
 		if city 		== "":
@@ -214,7 +217,7 @@ def weather():
 
 		irc.send("PRIVMSG " + channel + " :The weather in " + city + " : " + weather + ", with a temperature of " + str( temperature ) + " c ( " + str( temperature*9/5+32  ) + " F ) and a humidity of " + humidity  + ". The wind is " + winddirection + " at " + windspeed + " with " +  windgust  +  ".\r\n")
 	except:
-		irc.send("PRIVMSG " + channel + " :Could not find the weather for " + paramData)
+		irc.send("PRIVMSG " + channel + " :Could not find the weather for " + paramData + "\r\n")
 
 
 def hug():
@@ -228,6 +231,8 @@ def ahk():
 	else:
 		irc.send("PRIVMSG " + channel + " :" + data + "\r\n")
 
+def stop():
+	sys.exit()
 
 def commands():
 	commandVar 		= ""
@@ -262,7 +267,8 @@ commandRegex 		= {
 	".*" + botName + ".*(search ahk(\sfor)?|ahk search(\sfor)?)\s(?P<Data>.*?)(&{2}|\\r)" : "ahk",
 	".*" + bot_cmd + "(ahk|a)\s(?P<Data>.*?)(&{2}|\\r)" : "ahk",
 	".*" + botName + ".*?(?P<Data>(can you do|list of commands|command list))(&{2}|\\r)" : "commands",
-	".*" + bot_cmd + "(?P<Data>(commands|c)\s?)" : "commands"
+	".*" + bot_cmd + "(?P<Data>(commands|c)\s?)(&{2}|\\r)" : "commands",
+	".*" + bot_cmd + "(?P<Data>(stop|die)\s?)(&{2}|\\r)" : "stop"
 }
 
 commandList 	= {
@@ -277,11 +283,17 @@ commandList 	= {
 	"weather" : weather,
 	"hug" : hug,
 	"ahk" : ahk,
-	"commands" : commands
+	"commands" : commands,
+	"stop" : stop
 }
 
+ownerCommands 		= ["join", "leave", "stop" ]
 
 def callFunction(function):
+	for key in ownerCommands:
+		if key == function and host != master:
+			irc.send("PRIVMSG " + channel + " :You are not my master!\r\n")
+			return 0
 	commandList[ function]()
 ##################################################################################################################
 
@@ -308,7 +320,6 @@ data 				= 1
 
 while data:
 	data 			= irc.recv(1024)
-	print( data )
 	dt 				= re.match(":(?P<User>.*?)!~?(?P<Host>.*?)\s(?P<Command>.*?)\s(?P<Channel>.*?)\s:(?P<Message>.*\\r)", data)
 
 	if data[0:4] == "PING":											# If PING is found in the data.
@@ -328,6 +339,5 @@ while data:
 			if reg:
 				paramData 	= reg.group("Data")
 				params 		= paramData.split(' ')
-				print(paramData)
 				callFunction(commandRegex[x])
 
