@@ -27,14 +27,15 @@ class plugin:
 			Then runs the loadPlugins to load the modules. ( Which also gets run each time you call .run()		
 	'''	
 	def __init__(self, pluginFolder ):
+		self.pluginFolder	= pluginFolder
 		self.commands 	= {}
-		self.loadPlugins(pluginFolder )
+		self.loadPlugins()
 	
 	''' loadPlugins
 		Loads all the plugins into a variable which is classwide.
 	'''
-	def loadPlugins(self, pluginFolder ):	
-		files 		= listdir(pluginFolder)
+	def loadPlugins(self):	
+		files 		= listdir(self.pluginFolder)
 		
 		for x in files:
 			if ".py" in x:
@@ -57,6 +58,7 @@ class plugin:
 		Returns the return value from the execute function of the module if it finds the right module, if not 0 is returned.
 	'''
 	def run(self, commandName, *params ):
+		self.loadPlugins(self.pluginFolder )
 		for z in self.commands:
 			if any( commandName == cmd for cmd in self.loadMeta(z, "aliases") ):
 				return self.commands[z].execute((commandName, self.commands), params)
